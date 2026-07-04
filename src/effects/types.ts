@@ -100,8 +100,9 @@ export interface EffectDef {
   passes: PassSpec[]
   controls: ControlDef[]
   defaults: Params
-  /** px of neighborhood a pass reads beyond its own pixel (tiled export apron) */
-  apron?: (params: Params) => number
+  /** px of neighborhood a pass reads beyond its own pixel at the given
+   *  output size (tiled export apron) */
+  apron?: (params: Params, outputSize: [number, number]) => number
   cpu?: CpuSpec
 }
 
