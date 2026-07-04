@@ -1,0 +1,39 @@
+/* ── REFLECT design tokens · Ryoji Ikeda system ─────────────────────────
+   Pure black / pure white. Hairlines. Monospace. Data readouts.
+   No rounded corners (single exception: the wipe handle). No shadows.  */
+
+:root {
+  --bg: #000000;
+  --fg: #ffffff;
+
+  --fg-dim: rgba(255, 255, 255, 0.55);
+  --fg-faint: rgba(255, 255, 255, 0.32);
+  --hair: rgba(255, 255, 255, 0.18);
+  --hair-strong: rgba(255, 255, 255, 0.4);
+  --overlay: rgba(0, 0, 0, 0.82);
+
+  --accent: #ffffff; /* the only accent is inversion */
+
+  --font-mono: 'IBM Plex Mono', 'SF Mono', 'Cascadia Mono', 'JetBrains Mono',
+    'Roboto Mono', Menlo, Consolas, monospace;
+
+  --fs-micro: 9px;
+  --fs-label: 10px;
+  --fs-body: 11px;
+  --fs-value: 11px;
+  --fs-title: 12px;
+
+  --track: 0.08em;
+  --track-wide: 0.14em;
+
+  --pad: 12px;
+  --pad-lg: 16px;
+
+  --h-topbar: 44px;
+  --h-dock: 118px;
+  --w-panel: 224px;
+
+  --z-overlay: 40;
+  --z-dialog: 50;
+  --z-drop: 60;
+}
