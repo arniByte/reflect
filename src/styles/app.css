@@ -534,14 +534,23 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.7); }
 
 /* ── phone: stacked, horizontal effect rail, bottom-sheet panels ─────── */
 @media (max-width: 760px) {
+  /* the whole page scrolls on phones — a fixed 100dvh shell would clip the
+     stacked panels + dock below the fold (base .app has overflow:hidden) */
   .app {
-    grid-template-rows: auto minmax(38vh, 1fr) auto auto auto;
+    grid-template-rows: auto 56vh auto auto auto;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'top' 'stage' 'left' 'right' 'dock';
-    height: 100dvh;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
   }
   .panel--left, .panel--right { min-width: 0; }
+  /* keep the toolbar reachable while the body scrolls */
   .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
     padding-top: env(safe-area-inset-top);
     height: auto;
     min-height: var(--h-topbar);

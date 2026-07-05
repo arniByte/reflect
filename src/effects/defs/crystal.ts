@@ -33,4 +33,5 @@ export const crystalDef: EffectDef = {
   },
   // reads a 1-cell neighborhood; a modest apron keeps tiled export seamless
   apron: (p, [w]) => Math.ceil((w / (p.cells as number)) * 1.5),
+  opaque: true,
 }

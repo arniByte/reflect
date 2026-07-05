@@ -71,4 +71,5 @@ export const gradientmapDef: EffectDef = {
     curve: 1,
     blend: 0,
   },
+  opaque: true,
 }

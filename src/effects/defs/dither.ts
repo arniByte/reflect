@@ -89,4 +89,5 @@ export const ditherDef: EffectDef = {
       strength: p.strength as number,
     }),
   },
+  opaque: true,
 }

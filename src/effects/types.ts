@@ -106,6 +106,9 @@ export interface EffectDef {
    *  output size (tiled export apron) */
   apron?: (params: Params, outputSize: [number, number]) => number
   cpu?: CpuSpec
+  /** true for full-frame effects that always emit opaque pixels (they don't
+   *  call withBg) — the TRANSPARENT export toggle is meaningless for these */
+  opaque?: boolean
 }
 
 /* ── shared helpers for defs ─────────────────────────────────────────── */

@@ -41,4 +41,5 @@ export const glitchDef: EffectDef = {
   },
   // pass 2 reads uPrev up to smearLen * output-width px to the left
   apron: (p, [w]) => Math.ceil((p.smearLen as number) * w),
+  opaque: true,
 }

@@ -5,6 +5,7 @@ import { exportImage, planExport, type ExportOptions } from '../render/exporter'
 import { downloadBlob, exportFileName } from '../share/download'
 import { canCopyImage, canWebShare, copyImage, shareImage, copyText } from '../share/share'
 import { encodeStateToHash } from '../share/urlState'
+import { getEffect } from '../effects/registry'
 import type { Renderer } from '../render/Renderer'
 
 type Format = 'png' | 'jpeg' | 'webp'
@@ -44,6 +45,11 @@ export function ExportDialog({ open, renderer, onClose }: Props) {
     return planExport(renderer, s, { scale, srcW, srcH })
   }, [renderer, srcW, srcH, scale, effectId])
 
+  // full-frame effects emit opaque pixels — transparency has no meaning
+  const opaqueEffect = getEffect(effectId).opaque === true
+  const transparentDisabled = format === 'jpeg' || opaqueEffect
+  const transparentOn = transparent && !transparentDisabled
+
   const run = async (action: 'download' | 'copy' | 'share') => {
     if (!renderer || busy) return
     setBusy(true)
@@ -53,7 +59,7 @@ export function ExportDialog({ open, renderer, onClose }: Props) {
       const opts: ExportOptions = {
         format,
         scale,
-        transparent: transparent && format !== 'jpeg',
+        transparent: transparentOn,
         signature,
         srcW,
         srcH,
@@ -147,12 +153,13 @@ export function ExportDialog({ open, renderer, onClose }: Props) {
           <button
             className="toggle"
             role="switch"
-            aria-checked={transparent && format !== 'jpeg'}
+            aria-checked={transparentOn}
             onClick={() => setTransparent((t) => !t)}
-            disabled={format === 'jpeg'}
-            style={format === 'jpeg' ? { opacity: 0.3 } : undefined}
+            disabled={transparentDisabled}
+            style={transparentDisabled ? { opacity: 0.3 } : undefined}
+            title={opaqueEffect ? 'This effect fills the whole frame' : undefined}
           >
-            <span className={`togglebox${transparent && format !== 'jpeg' ? ' togglebox--on' : ''}`} />
+            <span className={`togglebox${transparentOn ? ' togglebox--on' : ''}`} />
             <span className="lbl">TRANSPARENT BG</span>
           </button>
         </div>

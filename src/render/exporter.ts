@@ -151,8 +151,11 @@ export async function exportImage(renderer: Renderer, s: RenderState, opts: Expo
     }
   }
 
-  // signature is skipped on transparent PNGs (would sit on empty pixels)
-  if (opts.signature && !(opts.transparent && opts.format !== 'jpeg')) {
+  // skip the signature only when the output is genuinely a transparent cutout
+  // (a mark effect exported transparent) — full-frame opaque effects always
+  // render solid pixels, so the signature must still show there
+  const cutout = opts.transparent && opts.format !== 'jpeg' && !def.opaque
+  if (opts.signature && !cutout) {
     drawSignature(c2d, W, H)
   }
 
