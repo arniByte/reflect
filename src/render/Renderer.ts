@@ -170,6 +170,11 @@ export class Renderer {
     let prevTex: WebGLTexture | null = null
     for (let i = 0; i < def.passes.length; i++) {
       const pass = def.passes[i]
+      // evaluate uniforms/textures FIRST — these may lazily create GL
+      // textures (atlases, overlays), which must not clobber bound units
+      const uvals = pass.uniforms ? pass.uniforms(s.params, ctx) : null
+      const tmap = pass.textures ? pass.textures(s.params, ctx) : null
+
       const target = pp.write
       gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb)
       gl.viewport(0, 0, target.w, target.h)
@@ -177,14 +182,14 @@ export class Renderer {
       gl.useProgram(prog.prog)
       this.bindCommon(prog, s, outputSize, tileOrigin, bgAlpha)
       this.programs.setUniforms(prog, colorU as Record<string, UniformValue>)
-      if (pass.uniforms) this.programs.setUniforms(prog, pass.uniforms(s.params, ctx))
+      if (uvals) this.programs.setUniforms(prog, uvals)
       let unit = 1
       if (prevTex) {
         this.bindTexture(prog, 'uPrev', prevTex, unit)
         unit++
       }
-      if (pass.textures) {
-        for (const [name, tex] of Object.entries(pass.textures(s.params, ctx))) {
+      if (tmap) {
+        for (const [name, tex] of Object.entries(tmap)) {
           this.bindTexture(prog, name, tex, unit)
           unit++
         }

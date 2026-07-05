@@ -14,9 +14,10 @@ export interface ExportOptions {
   onProgress?(done: number, total: number): void
 }
 
-const TILE = 2048
 /** error-diffusion at export size is CPU-bound — cap it */
 export const CPU_EXPORT_CAP = 4096
+/** outputs up to this edge render as ONE tile (no seams possible at all) */
+const SINGLE_TILE_MAX = 4096
 
 export interface ExportPlan {
   w: number
@@ -29,7 +30,7 @@ export interface ExportPlan {
 export function planExport(renderer: Renderer, s: RenderState, opts: Pick<ExportOptions, 'scale' | 'srcW' | 'srcH'>): ExportPlan {
   const def = getEffect(s.effectId)
   const cpuPath = !!def.cpu?.active(s.params)
-  let limit = Math.min(renderer.caps.maxRb, renderer.caps.maxTex, 8192)
+  let limit = Math.min(renderer.caps.maxRb, renderer.caps.maxSafeTex, 8192)
   if (cpuPath) limit = Math.min(limit, CPU_EXPORT_CAP)
   const wantW = opts.srcW * opts.scale
   const wantH = opts.srcH * opts.scale
@@ -61,7 +62,12 @@ export async function exportImage(renderer: Renderer, s: RenderState, opts: Expo
     c2d.putImageData(flipIntoImageData(out, W, H), 0, 0)
     opts.onProgress?.(2, 2)
   } else {
-    const apron = Math.min(512, Math.ceil(def.apron?.(s.params, [W, H]) ?? 0))
+    // single-tile whenever the whole output fits — zero seam risk; tile only
+    // for the biggest exports, with a generous apron for nonlocal effects
+    const single = W <= SINGLE_TILE_MAX && H <= SINGLE_TILE_MAX
+    const wantApron = Math.ceil(def.apron?.(s.params, [W, H]) ?? 0)
+    const apron = single ? 0 : Math.min(2048, wantApron)
+    const TILE = single ? Math.max(W, H) : wantApron > 1024 ? 4096 : 2048
     const gl = renderer.gl
     const pp = new PingPong(gl)
     const tilesX = Math.ceil(W / TILE)

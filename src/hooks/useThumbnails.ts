@@ -8,6 +8,18 @@ import { flipIntoImageData } from '../util/pixels'
 const THUMB_W = 168
 const THUMB_H = 126
 
+/**
+ * Cell densities tuned for a full-size canvas turn to mush at 168px — scale
+ * the density-ish params down so thumbnails stay legible.
+ */
+function thumbParams(params: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...params }
+  if (typeof out.cells === 'number') out.cells = Math.max(24, Math.round((out.cells as number) * 0.42))
+  if (typeof out.rows === 'number') out.rows = Math.max(10, Math.round((out.rows as number) * 0.5))
+  if (typeof out.points === 'number') out.points = Math.min(out.points as number, 3)
+  return out
+}
+
 /** Live preset thumbnails rendered on the current image. */
 export function useThumbnails(
   renderer: Renderer | null,
@@ -32,7 +44,7 @@ export function useThumbnails(
             imageId,
             color: { ...DEFAULT_COLOR, ...(p.color ?? {}) },
             effectId: p.effectId,
-            params: { ...effectiveParams(p.effectId, {}), ...p.params },
+            params: thumbParams({ ...effectiveParams(p.effectId, {}), ...p.params }) as RenderState['params'],
             wipe: 0,
           }
           const px = renderer.renderThumbPixels(state, THUMB_W, THUMB_H)
