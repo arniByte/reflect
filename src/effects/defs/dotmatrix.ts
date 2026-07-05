@@ -15,6 +15,7 @@ export const dotmatrixDef: EffectDef = {
         uGamma: p.gamma as number,
         uGlow: p.glow as number,
         uColorMode: p.colorMode === 'source' ? 1 : 0,
+        uWave: p.wave as number,
         uMonoColor: hexToRgb(p.monoColor as string),
         uBg: hexToRgb(p.bg as string),
         ...groundUniforms(p, { dark: 0.4, desat: 0.7 }),
@@ -38,6 +39,8 @@ export const dotmatrixDef: EffectDef = {
     { kind: 'color', key: 'monoColor', label: 'COLOR' },
     { kind: 'color', key: 'bg', label: 'BG' },
     groundControl,
+    { kind: 'slider', key: 'wave', label: 'WAVE', min: 0, max: 1, step: 0.01, unit: 'pct' },
+    { kind: 'slider', key: 'trails', label: 'TRAILS', min: 0, max: 1, step: 0.01, unit: 'pct' },
   ],
   defaults: {
     cells: 104,
@@ -49,5 +52,8 @@ export const dotmatrixDef: EffectDef = {
     monoColor: '#fff2d9',
     bg: '#000000',
     ground: 0.28,
+    wave: 0,
+    trails: 0,
   },
+  animated: (p) => (p.wave as number) > 0 || (p.trails as number) > 0,
 }

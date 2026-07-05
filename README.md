@@ -9,10 +9,13 @@ your browser — WebGL2 shaders, no backend, no uploads.
 
 ## Features
 
-- **13 GPU effects** — gradient map, dot matrix, ASCII, crystal/voronoi,
-  cross-stitch, pill mosaic, terminal blocks, dither (Bayer +
-  Floyd–Steinberg/Atkinson), halftone, glitch, laser field, blueprint
-  annotations, plus a pure color pass
+- **15 GPU effects** — flow (liquid warp), ripple (water refraction), gradient
+  map, dot matrix, ASCII, crystal/voronoi, cross-stitch, pill mosaic, terminal
+  blocks, dither (Bayer + Floyd–Steinberg/Atkinson), halftone, glitch, laser
+  field, blueprint annotations, plus a pure color pass
+- **Animated effects at 60fps** — flow and ripple *displace the real pixels*
+  (the photo comes alive, not an overlay); dot matrix has a brightness wave.
+  A `TRAILS` control accumulates motion into long-exposure light trails
 - **Image GROUND** — mark effects composite over a treated version of your
   photo, so the result reads as the picture *transformed*, not marks on a void
 - **Curated presets** with live thumbnails rendered on *your* image

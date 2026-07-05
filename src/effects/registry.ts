@@ -12,10 +12,14 @@ import { laserDef } from './defs/laser'
 import { blueprintDef } from './defs/blueprint'
 import { gradientmapDef } from './defs/gradientmap'
 import { crystalDef } from './defs/crystal'
+import { flowDef } from './defs/flow'
+import { rippleDef } from './defs/ripple'
 
 /** Ordered list — drives the numbered effect list in the UI. */
 export const EFFECT_LIST: EffectDef[] = [
   noneDef,
+  flowDef,
+  rippleDef,
   gradientmapDef,
   dotmatrixDef,
   asciiDef,

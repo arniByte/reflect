@@ -6,6 +6,27 @@ import type { Preset } from './schema'
  */
 export const PRESETS: Preset[] = [
   {
+    id: 'liquid',
+    name: 'LIQUID',
+    effectId: 'flow',
+    params: { amount: 0.09, scale: 3, swirl: 0.6, chroma: 0.4, speed: 0.9, trails: 0.35 },
+    color: { saturation: 0.15, contrast: 0.1 },
+  },
+  {
+    id: 'water',
+    name: 'WATER',
+    effectId: 'ripple',
+    params: { amp: 0.035, freq: 30, spec: 0.3, drift: 0.5, speed: 1.1, trails: 0.4 },
+    color: { contrast: 0.1 },
+  },
+  {
+    id: 'pulse-wall',
+    name: 'PULSE WALL',
+    effectId: 'dotmatrix',
+    params: { cells: 100, colorMode: 'source', glow: 0.55, wave: 0.7, trails: 0.5, ground: 0.25 },
+    color: { contrast: 0.1 },
+  },
+  {
     id: 'ember-map',
     name: 'EMBER',
     effectId: 'gradientmap',

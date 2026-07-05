@@ -86,6 +86,15 @@ export async function exportImage(renderer: Renderer, s: RenderState, opts: Expo
   const def = getEffect(s.effectId)
   const bgAlpha = opts.transparent && opts.format !== 'jpeg' ? 0 : 1
 
+  // freeze the animation clock so every tile renders the same frame
+  renderer.freezeTime()
+  try {
+    return await renderTiles()
+  } finally {
+    renderer.unfreezeTime()
+  }
+
+  async function renderTiles(): Promise<Blob> {
   const canvas = new OffscreenCanvas(W, H)
   const c2d = canvas.getContext('2d')!
 
@@ -161,4 +170,5 @@ export async function exportImage(renderer: Renderer, s: RenderState, opts: Expo
 
   const type = opts.format === 'png' ? 'image/png' : opts.format === 'jpeg' ? 'image/jpeg' : 'image/webp'
   return canvas.convertToBlob({ type, quality: opts.format === 'png' ? undefined : 0.92 })
+  }
 }

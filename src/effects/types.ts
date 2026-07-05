@@ -15,6 +15,8 @@ export type EffectId =
   | 'blueprint'
   | 'gradientmap'
   | 'crystal'
+  | 'flow'
+  | 'ripple'
 
 export type ParamValue = number | string | boolean
 export type Params = Record<string, ParamValue>
@@ -109,6 +111,11 @@ export interface EffectDef {
   /** true for full-frame effects that always emit opaque pixels (they don't
    *  call withBg) — the TRANSPARENT export toggle is meaningless for these */
   opaque?: boolean
+  /** true (or a predicate on params) if the effect uses uTime — the renderer
+   *  keeps a 60fps loop running and, if params include `trails` > 0,
+   *  accumulates motion trails. A predicate lets an effect stay static (no
+   *  loop) until its motion/trails params are turned up. */
+  animated?: boolean | ((params: Params) => boolean)
 }
 
 /* ── shared helpers for defs ─────────────────────────────────────────── */
