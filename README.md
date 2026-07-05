@@ -9,9 +9,12 @@ your browser — WebGL2 shaders, no backend, no uploads.
 
 ## Features
 
-- **11 GPU effects** — dot matrix, ASCII, cross-stitch, pill mosaic, terminal
-  blocks, dither (Bayer + Floyd–Steinberg/Atkinson), halftone, glitch, laser
-  field, blueprint annotations, plus a pure color pass
+- **13 GPU effects** — gradient map, dot matrix, ASCII, crystal/voronoi,
+  cross-stitch, pill mosaic, terminal blocks, dither (Bayer +
+  Floyd–Steinberg/Atkinson), halftone, glitch, laser field, blueprint
+  annotations, plus a pure color pass
+- **Image GROUND** — mark effects composite over a treated version of your
+  photo, so the result reads as the picture *transformed*, not marks on a void
 - **Curated presets** with live thumbnails rendered on *your* image
 - **Understandable color** — exposure / contrast / saturation / hue /
   temperature / tint / invert + duotone mapping, applied before every effect
