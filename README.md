@@ -3,6 +3,8 @@
 Minimal, Ryoji-Ikeda-styled image effects console. Everything runs locally in
 your browser — WebGL2 shaders, no backend, no uploads.
 
+![editor](docs/hero.jpg)
+
 ![preset grid](docs/presets.jpg)
 
 ## Features

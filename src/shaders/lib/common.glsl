@@ -72,12 +72,19 @@ vec3 grade(vec3 c) {
   return clamp(c, 0.0, 1.0);
 }
 
+// The source texture stores row 0 = image TOP at v=0 (ImageBitmap uploads
+// ignore UNPACK_FLIP_Y), while our uv space has v=0 at the bottom — flip at
+// sample time. ALL source access must go through srcUV/srcAt*/cellColor.
+vec2 srcUV(vec2 uv) {
+  return vec2(uv.x, 1.0 - uv.y);
+}
+
 // graded source at uv (global 0..1), explicit mip lod
 vec3 srcAtLod(vec2 uv, float lod) {
-  return grade(textureLod(uSrc, uv, lod).rgb);
+  return grade(textureLod(uSrc, srcUV(uv), lod).rgb);
 }
 vec3 srcAt(vec2 uv) {
-  return grade(texture(uSrc, uv).rgb);
+  return grade(texture(uSrc, srcUV(uv)).rgb);
 }
 
 // mip level that averages a cell of `cellPx` output pixels

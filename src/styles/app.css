@@ -519,15 +519,16 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.7); }
 
 @media (max-width: 760px) {
   .app {
-    grid-template-rows: var(--h-topbar) 1fr auto auto var(--h-dock);
+    grid-template-rows: var(--h-topbar) minmax(44vh, 1fr) auto auto var(--h-dock);
     grid-template-columns: 1fr;
     grid-template-areas: 'top' 'stage' 'left' 'right' 'dock';
   }
   .panel--left, .panel--right {
     border: none;
     border-top: 1px solid var(--hair);
-    max-height: 30vh;
+    max-height: 26vh;
   }
   .app { --h-dock: 96px; }
   .pthumb__img { width: 64px; height: 48px; }
+  .hud--tr, .hud--br { display: none; }
 }
