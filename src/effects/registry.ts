@@ -10,12 +10,16 @@ import { halftoneDef } from './defs/halftone'
 import { glitchDef } from './defs/glitch'
 import { laserDef } from './defs/laser'
 import { blueprintDef } from './defs/blueprint'
+import { gradientmapDef } from './defs/gradientmap'
+import { crystalDef } from './defs/crystal'
 
-/** Ordered list — drives the numbered effect list in the UI (01–11). */
+/** Ordered list — drives the numbered effect list in the UI. */
 export const EFFECT_LIST: EffectDef[] = [
   noneDef,
+  gradientmapDef,
   dotmatrixDef,
   asciiDef,
+  crystalDef,
   stitchDef,
   pillsDef,
   blocksDef,

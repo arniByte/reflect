@@ -1,5 +1,5 @@
 import type { EffectDef } from '../types'
-import { hexToRgb } from '../types'
+import { hexToRgb, groundControl, groundUniforms } from '../types'
 import frag from '../../shaders/effects/ascii.frag?raw'
 
 /** Charsets ordered dark → bright (index 0 = sparsest mark). */
@@ -27,6 +27,7 @@ export const asciiDef: EffectDef = {
         uMonoColor: hexToRgb(p.monoColor as string),
         uBg: hexToRgb(p.bg as string),
         uGlyphCount: ctx.getAtlas({ kind: 'glyph', charset: charsetFor(p), bold: true }).count,
+        ...groundUniforms(p, { dark: 0.35, desat: 0.75 }),
       }),
       textures: (p, ctx) => ({
         uAtlas: ctx.getAtlas({ kind: 'glyph', charset: charsetFor(p), bold: true }).tex,
@@ -57,13 +58,15 @@ export const asciiDef: EffectDef = {
     { kind: 'color', key: 'monoColor', label: 'COLOR' },
     { kind: 'color', key: 'bg', label: 'BG' },
     { kind: 'slider', key: 'jitter', label: 'JITTER', min: 0, max: 1, step: 0.01 },
+    groundControl,
   ],
   defaults: {
-    cells: 110,
+    cells: 120,
     charset: 'wire',
     ink: 'source',
     monoColor: '#37ff8b',
     bg: '#000000',
-    jitter: 0.35,
+    jitter: 0.3,
+    ground: 0.22,
   },
 }

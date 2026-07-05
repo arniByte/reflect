@@ -21,6 +21,7 @@ export function ExportDialog({ open, renderer, onClose }: Props) {
   const [format, setFormat] = useState<Format>('png')
   const [scale, setScale] = useState<Scale>(2)
   const [transparent, setTransparent] = useState(false)
+  const [signature, setSignature] = useState(true)
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
 
@@ -53,6 +54,7 @@ export function ExportDialog({ open, renderer, onClose }: Props) {
         format,
         scale,
         transparent: transparent && format !== 'jpeg',
+        signature,
         srcW,
         srcH,
         onProgress: (d, t) => setProgress(t ? d / t : 0),
@@ -152,6 +154,17 @@ export function ExportDialog({ open, renderer, onClose }: Props) {
           >
             <span className={`togglebox${transparent && format !== 'jpeg' ? ' togglebox--on' : ''}`} />
             <span className="lbl">TRANSPARENT BG</span>
+          </button>
+        </div>
+        <div className="sheet__row">
+          <button
+            className="toggle"
+            role="switch"
+            aria-checked={signature}
+            onClick={() => setSignature((v) => !v)}
+          >
+            <span className={`togglebox${signature ? ' togglebox--on' : ''}`} />
+            <span className="lbl">SIGNATURE · BY ARNI</span>
           </button>
         </div>
         {busy && (

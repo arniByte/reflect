@@ -1,5 +1,5 @@
 import type { EffectCtx, EffectDef, Params } from '../types'
-import { hexToRgb } from '../types'
+import { hexToRgb, groundControl, groundUniforms } from '../types'
 import edgeFrag from '../../shaders/effects/blueprint_edge.frag?raw'
 import mainFrag from '../../shaders/effects/blueprint.frag?raw'
 
@@ -147,6 +147,7 @@ export const blueprintDef: EffectDef = {
         uLabels: p.labels as number,
         uEdgeColor: hexToRgb(p.color as string),
         uBg: hexToRgb(p.bg as string),
+        ...groundUniforms(p, { dark: 0.3, desat: 0.85 }),
       }),
       textures: (p, ctx) => ({
         uAnnot: ctx.getOverlayTexture(
@@ -166,15 +167,17 @@ export const blueprintDef: EffectDef = {
     { kind: 'slider', key: 'labels', label: 'LABELS', min: 0, max: 1, step: 0.01 },
     { kind: 'color', key: 'color', label: 'COLOR' },
     { kind: 'color', key: 'bg', label: 'BG' },
+    groundControl,
   ],
   defaults: {
-    edgeT: 0.12,
-    contours: 6,
+    edgeT: 0.1,
+    contours: 7,
     points: 8,
     arc: true,
     labels: 0.9,
     color: '#ffffff',
     bg: '#000000',
+    ground: 0.14,
   },
   apron: () => 4,
 }

@@ -34,6 +34,10 @@ export function colorUniforms(c: ColorState): Record<string, number | [number, n
     uDuoMix: c.duoEnabled ? c.duoMix : 0,
     uDuoShadow: hexToRgb3(c.duoShadow),
     uDuoHighlight: hexToRgb3(c.duoHighlight),
+    // ground defaults (void); mark effects override via their own uniforms()
+    uGround: 0,
+    uGroundDark: 0.5,
+    uGroundDesat: 0.6,
   }
 }
 

@@ -100,10 +100,30 @@ vec3 cellColor(vec2 gp, float cellPx) {
   return srcAtLod(cellCenter / uOutputSize, lodForCell(cellPx));
 }
 
+// GROUND: an image-derived layer that sits BEHIND the marks, so the effect
+// reads as "the picture became this" instead of marks floating in a void.
+// uGround 0 = solid bg color; 1 = the graded source, dimmed and pulled toward
+// the ink hue for cohesion. Set globally (default 0); mark effects that want
+// it expose a control.
+uniform float uGround;      // 0..1 image-ground amount
+uniform float uGroundDark;  // brightness of the image ground (0..1)
+uniform float uGroundDesat; // 0 keep source color .. 1 monochrome toward ink
+
+vec3 groundColor(vec3 bg, vec3 ink) {
+  if (uGround < 0.001) return bg;
+  vec3 g = srcAtLod(globalUV(), 1.0);
+  float gl = luma(g);
+  // desaturate toward an ink-tinted greyscale for a cohesive treatment
+  vec3 mono = mix(bg, ink, gl);
+  g = mix(g, mono, uGroundDesat) * uGroundDark;
+  return mix(bg, g, uGround);
+}
+
 // Standard output composition for mark-on-background effects.
-// On screen (uBgAlpha=1): solid mix over bg. Transparent export (uBgAlpha=0):
-// straight-alpha ink with coverage `a`.
+// On screen (uBgAlpha=1): marks over the (optional image) ground.
+// Transparent export (uBgAlpha=0): straight-alpha ink with coverage `a`.
 vec4 withBg(vec3 ink, vec3 bg, float a) {
-  vec3 solid = mix(bg, ink, a);
+  vec3 ground = groundColor(bg, ink);
+  vec3 solid = mix(ground, ink, a);
   return vec4(mix(ink, solid, uBgAlpha), mix(a, 1.0, uBgAlpha));
 }

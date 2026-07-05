@@ -1,5 +1,5 @@
 import type { EffectDef } from '../types'
-import { hexToRgb } from '../types'
+import { hexToRgb, groundControl, groundUniforms } from '../types'
 import frag from '../../shaders/effects/blocks.frag?raw'
 
 export const blocksDef: EffectDef = {
@@ -16,6 +16,7 @@ export const blocksDef: EffectDef = {
         uGlow: p.glow as number,
         uInk: hexToRgb(p.ink as string),
         uBg: hexToRgb(p.bg as string),
+        ...groundUniforms(p, { dark: 0.28, desat: 0.85 }),
       }),
     },
   ],
@@ -27,14 +28,16 @@ export const blocksDef: EffectDef = {
     { kind: 'slider', key: 'glow', label: 'GLOW', min: 0, max: 1, step: 0.01 },
     { kind: 'color', key: 'ink', label: 'INK' },
     { kind: 'color', key: 'bg', label: 'BG' },
+    groundControl,
   ],
   defaults: {
-    cells: 72,
+    cells: 78,
     sub: 3,
-    gamma: 1.15,
-    scan: 0.35,
+    gamma: 1.05,
+    scan: 0.3,
     glow: 0.5,
     ink: '#37ff8b',
     bg: '#000814',
+    ground: 0.16,
   },
 }

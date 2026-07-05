@@ -1,5 +1,5 @@
 import type { EffectDef } from '../types'
-import { hexToRgb } from '../types'
+import { hexToRgb, groundControl, groundUniforms } from '../types'
 import frag from '../../shaders/effects/stitch.frag?raw'
 
 export const stitchDef: EffectDef = {
@@ -15,6 +15,7 @@ export const stitchDef: EffectDef = {
         uColorB: hexToRgb(p.colorB as string),
         uBg: hexToRgb(p.bg as string),
         uGlyphCount: 3,
+        ...groundUniforms(p, { dark: 0.32, desat: 0.65 }),
       }),
       textures: (_p, ctx) => ({
         uAtlas: ctx.getAtlas({ kind: 'symbol', symbols: ['x', 'square', 'square-fill'] }).tex,
@@ -27,12 +28,14 @@ export const stitchDef: EffectDef = {
     { kind: 'color', key: 'colorA', label: 'COLOR A' },
     { kind: 'color', key: 'colorB', label: 'COLOR B' },
     { kind: 'color', key: 'bg', label: 'BG' },
+    groundControl,
   ],
   defaults: {
-    cells: 56,
-    chromaT: 0.35,
+    cells: 64,
+    chromaT: 0.32,
     colorA: '#ffffff',
     colorB: '#ff2222',
     bg: '#000000',
+    ground: 0.2,
   },
 }

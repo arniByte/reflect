@@ -6,10 +6,31 @@ import type { Preset } from './schema'
  */
 export const PRESETS: Preset[] = [
   {
+    id: 'ember-map',
+    name: 'EMBER',
+    effectId: 'gradientmap',
+    params: { gradient: 'ember', levels: 0, curve: 1.1 },
+    color: { contrast: 0.12 },
+  },
+  {
+    id: 'ink-duotone',
+    name: 'INK DUO',
+    effectId: 'gradientmap',
+    params: { gradient: 'ink', levels: 5, curve: 1 },
+    color: { contrast: 0.2 },
+  },
+  {
+    id: 'stained-glass',
+    name: 'STAINED GLASS',
+    effectId: 'crystal',
+    params: { cells: 58, jitter: 0.95, facet: 1, edge: 0.45 },
+    color: { saturation: 0.2, contrast: 0.1 },
+  },
+  {
     id: 'matrix-board',
     name: 'MATRIX BOARD',
     effectId: 'dotmatrix',
-    params: { cells: 96, monoColor: '#fff2d9', glow: 0.55, gamma: 1.1 },
+    params: { cells: 100, colorMode: 'source', glow: 0.5, gamma: 0.95, ground: 0.3 },
     color: { contrast: 0.08 },
   },
   {

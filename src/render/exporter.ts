@@ -4,14 +4,51 @@ import type { Renderer } from './Renderer'
 import type { RenderState } from '../state/renderState'
 import { flipIntoImageData } from '../util/pixels'
 
+/** rAF that still resolves in a backgrounded tab (where rAF never fires). */
+function yieldFrame(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      clearTimeout(t)
+      resolve()
+    }
+    const t = setTimeout(finish, 120)
+    requestAnimationFrame(finish)
+  })
+}
+
 export interface ExportOptions {
   format: 'png' | 'jpeg' | 'webp'
   scale: 1 | 2 | 4
   transparent: boolean
+  /** stamp a subtle "REFLECT · BY ARNI" corner signature */
+  signature?: boolean
   /** original image size (uncapped) */
   srcW: number
   srcH: number
   onProgress?(done: number, total: number): void
+}
+
+function drawSignature(c2d: OffscreenCanvasRenderingContext2D, W: number, H: number) {
+  const s = Math.max(W / 1400, 0.6)
+  const pad = 22 * s
+  const fs = Math.max(11, 13 * s)
+  c2d.save()
+  c2d.font = `500 ${fs}px "IBM Plex Mono", monospace`
+  c2d.textAlign = 'right'
+  c2d.textBaseline = 'alphabetic'
+  const text = 'REFLECT · BY ARNI'
+  const x = W - pad
+  const y = H - pad
+  // dark plate for legibility on any background
+  const w = c2d.measureText(text).width
+  c2d.fillStyle = 'rgba(0,0,0,0.35)'
+  c2d.fillRect(x - w - 8 * s, y - fs, w + 16 * s, fs + 10 * s)
+  c2d.fillStyle = 'rgba(255,255,255,0.9)'
+  c2d.fillText(text, x, y)
+  c2d.restore()
 }
 
 /** error-diffusion at export size is CPU-bound — cap it */
@@ -65,9 +102,13 @@ export async function exportImage(renderer: Renderer, s: RenderState, opts: Expo
     // single-tile whenever the whole output fits — zero seam risk; tile only
     // for the biggest exports, with a generous apron for nonlocal effects
     const single = W <= SINGLE_TILE_MAX && H <= SINGLE_TILE_MAX
-    const wantApron = Math.ceil(def.apron?.(s.params, [W, H]) ?? 0)
-    const apron = single ? 0 : Math.min(2048, wantApron)
-    const TILE = single ? Math.max(W, H) : wantApron > 1024 ? 4096 : 2048
+    // honor the FULL apron an effect declares (glitch can want ~0.4·W), and
+    // shrink the tile so tile+2·apron still fits the texture budget — capping
+    // the apron instead would reintroduce visible seams
+    const budget = Math.min(renderer.caps.maxRb, renderer.caps.maxSafeTex, 8192)
+    const wantApron = single ? 0 : Math.ceil(def.apron?.(s.params, [W, H]) ?? 0)
+    const apron = single ? 0 : Math.min(wantApron, Math.floor((budget - 256) / 2))
+    const TILE = single ? Math.max(W, H) : Math.max(256, budget - 2 * apron)
     const gl = renderer.gl
     const pp = new PingPong(gl)
     const tilesX = Math.ceil(W / TILE)
@@ -96,17 +137,23 @@ export async function exportImage(renderer: Renderer, s: RenderState, opts: Expo
           const px = new Uint8Array(tw * th * 4)
           gl.readPixels(apron, apron, tw, th, gl.RGBA, gl.UNSIGNED_BYTE, px)
           gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+          if (gl.isContextLost()) throw new Error('WEBGL CONTEXT LOST')
           // GL y0 is from the bottom → canvas y = H - y0 - th
           c2d.putImageData(flipIntoImageData(px, tw, th), x0, H - y0 - th)
           done++
           opts.onProgress?.(done, total)
-          // let the GPU/compositor breathe (watchdog-friendly)
-          await new Promise((r) => requestAnimationFrame(r))
+          // let the GPU/compositor breathe (watchdog-friendly); survives bg tab
+          await yieldFrame()
         }
       }
     } finally {
       pp.dispose()
     }
+  }
+
+  // signature is skipped on transparent PNGs (would sit on empty pixels)
+  if (opts.signature && !(opts.transparent && opts.format !== 'jpeg')) {
+    drawSignature(c2d, W, H)
   }
 
   const type = opts.format === 'png' ? 'image/png' : opts.format === 'jpeg' ? 'image/jpeg' : 'image/webp'

@@ -24,6 +24,10 @@ export function useRenderer(canvasRef: React.RefObject<HTMLCanvasElement | null>
     rendererRef.current = r
     setRenderer(r)
 
+    // surface GPU context loss/recovery instead of a silently frozen canvas
+    r.onContextLost = () => useStore.getState().showToast('GPU CONTEXT LOST — RECOVERING')
+    r.onContextRestored = () => useStore.getState().showToast('GPU CONTEXT RESTORED')
+
     // feed image changes
     const unsubImg = useStore.subscribe((s, prev) => {
       if (s.bitmap && s.imageId !== prev.imageId) {

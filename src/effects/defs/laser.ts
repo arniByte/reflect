@@ -1,5 +1,5 @@
 import type { EffectDef } from '../types'
-import { hexToRgb } from '../types'
+import { hexToRgb, groundControl, groundUniforms } from '../types'
 import frag from '../../shaders/effects/laser.frag?raw'
 
 export const laserDef: EffectDef = {
@@ -15,6 +15,7 @@ export const laserDef: EffectDef = {
         uBaseMix: p.base as number,
         uColor: hexToRgb(p.color as string),
         uBg: hexToRgb(p.bg as string),
+        ...groundUniforms(p, { dark: 0.35, desat: 0.9 }),
       }),
     },
   ],
@@ -25,6 +26,7 @@ export const laserDef: EffectDef = {
     { kind: 'slider', key: 'base', label: 'BASE', min: 0, max: 0.5, step: 0.01 },
     { kind: 'color', key: 'color', label: 'COLOR' },
     { kind: 'color', key: 'bg', label: 'BG' },
+    groundControl,
   ],
   defaults: {
     count: 28,
@@ -33,5 +35,6 @@ export const laserDef: EffectDef = {
     base: 0.24,
     color: '#37ff8b',
     bg: '#000000',
+    ground: 0.12,
   },
 }

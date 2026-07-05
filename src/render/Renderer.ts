@@ -38,8 +38,12 @@ export class Renderer {
   private rafId = 0
   private overlays = new Map<string, OverlayEntry>()
   private cpu: CpuDitherEngine
+  private lost = false
+  private lastBitmap: ImageBitmap | null = null
   /** called after a frame renders (for HUD render-time readout) */
   onFrame: ((ms: number) => void) | null = null
+  onContextLost: (() => void) | null = null
+  onContextRestored: (() => void) | null = null
 
   constructor(private canvas: HTMLCanvasElement) {
     const { gl, caps } = createGLContext(canvas)
@@ -50,12 +54,53 @@ export class Renderer {
     this.atlases = new AtlasCache(gl)
     this.pp = new PingPong(gl)
     this.cpu = new CpuDitherEngine(() => this.requestFrame())
+
+    // GPU context can be lost on OOM, TDR, tab backgrounding, driver reset.
+    // Preventing the default lets the browser fire `restored`; we rebuild.
+    canvas.addEventListener('webglcontextlost', this.onGlLost)
+    canvas.addEventListener('webglcontextrestored', this.onGlRestored)
+
+    // Atlases rasterized before the webfont loads bake the fallback face;
+    // drop caches once the real font is ready so glyphs redraw crisp.
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      void document.fonts.ready.then(() => {
+        if (this.lost) return
+        this.atlases.dispose()
+        this.clearOverlays()
+        this.requestFrame()
+      })
+    }
+  }
+
+  private onGlLost = (e: Event) => {
+    e.preventDefault()
+    this.lost = true
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId)
+      this.rafId = 0
+    }
+    this.onContextLost?.()
+  }
+
+  private onGlRestored = () => {
+    // rebuild every GPU resource from CPU-side sources of truth
+    this.lost = false
+    this.programs.dispose()
+    this.atlases.dispose()
+    this.pp.dispose()
+    this.clearOverlays()
+    this.quad = createQuad(this.gl)
+    this.srcTex = null
+    if (this.lastBitmap) this.setImage(this.lastBitmap)
+    this.onContextRestored?.()
+    this.requestFrame()
   }
 
   /* ── image ─────────────────────────────────────────────────────────── */
 
   setImage(bitmap: ImageBitmap) {
     const gl = this.gl
+    this.lastBitmap = bitmap
     if (this.srcTex) gl.deleteTexture(this.srcTex)
 
     // cap the stored texture to GPU-safe size; shapes are procedural so
@@ -89,7 +134,7 @@ export class Renderer {
   }
 
   private requestFrame() {
-    if (this.rafId) return
+    if (this.rafId || this.lost) return
     this.rafId = requestAnimationFrame(() => {
       this.rafId = 0
       this.renderFrame()
@@ -99,7 +144,7 @@ export class Renderer {
   private renderFrame() {
     const { gl } = this
     const s = this.state
-    if (!s || !this.srcTex) return
+    if (!s || !this.srcTex || this.lost) return
     const w = this.canvas.width
     const h = this.canvas.height
     if (w === 0 || h === 0) return
@@ -337,12 +382,20 @@ export class Renderer {
 
   dispose() {
     if (this.rafId) cancelAnimationFrame(this.rafId)
+    this.canvas.removeEventListener('webglcontextlost', this.onGlLost)
+    this.canvas.removeEventListener('webglcontextrestored', this.onGlRestored)
     this.cpu.dispose()
     this.clearOverlays()
     this.pp.dispose()
     this.atlases.dispose()
     this.programs.dispose()
     this.quad.dispose()
+    if (this.srcTex) this.gl.deleteTexture(this.srcTex)
+    this.srcTex = null
+  }
+
+  get isLost(): boolean {
+    return this.lost
   }
 }
 

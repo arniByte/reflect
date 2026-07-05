@@ -83,6 +83,10 @@ export const ditherDef: EffectDef = {
       method: p.method as string,
       palette: paletteHexes(p).join(','),
       serpentine: true,
+      // included in the request so the preview cache key invalidates AND the
+      // worker honors them — otherwise both sliders are dead on the CPU path
+      pixel: Math.max(1, Math.round(p.pixel as number)),
+      strength: p.strength as number,
     }),
   },
 }

@@ -13,6 +13,8 @@ export type EffectId =
   | 'glitch'
   | 'laser'
   | 'blueprint'
+  | 'gradientmap'
+  | 'crystal'
 
 export type ParamValue = number | string | boolean
 export type Params = Record<string, ParamValue>
@@ -124,4 +126,27 @@ export function paletteToV3v(hexes: string[]): { v3v: Float32Array } {
     arr[i * 3 + 2] = b
   })
   return { v3v: arr }
+}
+
+/** GROUND control — reusable across mark effects (image shows behind marks). */
+export const groundControl: ControlDef = {
+  kind: 'slider',
+  key: 'ground',
+  label: 'GROUND',
+  min: 0,
+  max: 1,
+  step: 0.01,
+  unit: 'pct',
+}
+
+/** Uniforms for the shared image-ground helper in common.glsl. */
+export function groundUniforms(
+  p: Params,
+  opts: { dark?: number; desat?: number } = {},
+): Record<string, number> {
+  return {
+    uGround: (p.ground as number) ?? 0,
+    uGroundDark: opts.dark ?? 0.5,
+    uGroundDesat: opts.desat ?? 0.6,
+  }
 }

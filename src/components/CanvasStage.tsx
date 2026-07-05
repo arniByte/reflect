@@ -62,8 +62,13 @@ export function CanvasStage({ onRenderer, emptySlot }: Props) {
     if (!canvas || frame.w === 0) return
     const dpr = window.devicePixelRatio || 1
     const f = QUALITY_FACTOR[quality]
-    const w = Math.min(MAX_BACKING, Math.round(frame.w * dpr * f))
-    const h = Math.min(MAX_BACKING, Math.round(frame.h * dpr * f))
+    // clamp BOTH axes by one shared scale so backing aspect == CSS aspect —
+    // per-axis clamping would squash procedural marks into ellipses
+    const rawW = frame.w * dpr * f
+    const rawH = frame.h * dpr * f
+    const k = Math.min(1, MAX_BACKING / rawW, MAX_BACKING / rawH)
+    const w = Math.max(1, Math.round(rawW * k))
+    const h = Math.max(1, Math.round(rawH * k))
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w
       canvas.height = h

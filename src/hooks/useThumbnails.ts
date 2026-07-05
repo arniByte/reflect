@@ -54,7 +54,14 @@ export function useThumbnails(
         } catch (e) {
           console.error('thumb failed', p.id, e)
         }
-        await new Promise((r) => requestAnimationFrame(r))
+        // rAF, but don't stall forever if the tab is backgrounded
+        await new Promise<void>((r) => {
+          const t = setTimeout(r, 120)
+          requestAnimationFrame(() => {
+            clearTimeout(t)
+            r()
+          })
+        })
       }
     })()
 
