@@ -7,4 +7,5 @@ export const noneDef: EffectDef = {
   passes: [{ frag }],
   controls: [],
   defaults: {},
+  opaque: true,
 }

@@ -10,6 +10,7 @@ import type { RenderState } from '../state/renderState'
 import { colorUniforms } from '../state/renderState'
 import compositeFrag from '../shaders/composite.frag?raw'
 import blitFrag from '../shaders/effects/blit.frag?raw'
+import feedbackFrag from '../shaders/feedback.frag?raw'
 import { CpuDitherEngine } from './cpuDither'
 
 export interface LumaField {
@@ -38,8 +39,21 @@ export class Renderer {
   private rafId = 0
   private overlays = new Map<string, OverlayEntry>()
   private cpu: CpuDitherEngine
+  private lost = false
+  private lastBitmap: ImageBitmap | null = null
+  private startMs = performance.now()
+  private timeSeconds = 0
+  /** when set, freezes uTime (export tiles / thumbnails must be deterministic) */
+  private timeOverride: number | null = null
+  /** whether the last frame drove an animated effect (exposed for the HUD) */
+  isAnimating = false
+  /** persistent frame-accumulation buffer for motion trails */
+  private feedback: PingPong
+  private feedbackValid = false
   /** called after a frame renders (for HUD render-time readout) */
   onFrame: ((ms: number) => void) | null = null
+  onContextLost: (() => void) | null = null
+  onContextRestored: (() => void) | null = null
 
   constructor(private canvas: HTMLCanvasElement) {
     const { gl, caps } = createGLContext(canvas)
@@ -49,13 +63,57 @@ export class Renderer {
     this.programs = new ProgramCache(gl)
     this.atlases = new AtlasCache(gl)
     this.pp = new PingPong(gl)
+    this.feedback = new PingPong(gl)
     this.cpu = new CpuDitherEngine(() => this.requestFrame())
+
+    // GPU context can be lost on OOM, TDR, tab backgrounding, driver reset.
+    // Preventing the default lets the browser fire `restored`; we rebuild.
+    canvas.addEventListener('webglcontextlost', this.onGlLost)
+    canvas.addEventListener('webglcontextrestored', this.onGlRestored)
+
+    // Atlases rasterized before the webfont loads bake the fallback face;
+    // drop caches once the real font is ready so glyphs redraw crisp.
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      void document.fonts.ready.then(() => {
+        if (this.lost) return
+        this.atlases.dispose()
+        this.clearOverlays()
+        this.requestFrame()
+      })
+    }
+  }
+
+  private onGlLost = (e: Event) => {
+    e.preventDefault()
+    this.lost = true
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId)
+      this.rafId = 0
+    }
+    this.onContextLost?.()
+  }
+
+  private onGlRestored = () => {
+    // rebuild every GPU resource from CPU-side sources of truth
+    this.lost = false
+    this.programs.dispose()
+    this.atlases.dispose()
+    this.pp.dispose()
+    this.feedback.dispose()
+    this.feedbackValid = false
+    this.clearOverlays()
+    this.quad = createQuad(this.gl)
+    this.srcTex = null
+    if (this.lastBitmap) this.setImage(this.lastBitmap)
+    this.onContextRestored?.()
+    this.requestFrame()
   }
 
   /* ── image ─────────────────────────────────────────────────────────── */
 
   setImage(bitmap: ImageBitmap) {
     const gl = this.gl
+    this.lastBitmap = bitmap
     if (this.srcTex) gl.deleteTexture(this.srcTex)
 
     // cap the stored texture to GPU-safe size; shapes are procedural so
@@ -89,7 +147,7 @@ export class Renderer {
   }
 
   private requestFrame() {
-    if (this.rafId) return
+    if (this.rafId || this.lost) return
     this.rafId = requestAnimationFrame(() => {
       this.rafId = 0
       this.renderFrame()
@@ -99,16 +157,27 @@ export class Renderer {
   private renderFrame() {
     const { gl } = this
     const s = this.state
-    if (!s || !this.srcTex) return
+    if (!s || !this.srcTex || this.lost) return
     const w = this.canvas.width
     const h = this.canvas.height
     if (w === 0 || h === 0) return
 
     const t0 = performance.now()
+    this.timeSeconds = (t0 - this.startMs) / 1000
     const def = getEffect(s.effectId)
+    const animated =
+      typeof def.animated === 'function' ? def.animated(s.params) : def.animated === true
+    const trails = animated ? Math.max(0, Math.min(1, (s.params.trails as number) ?? 0)) : 0
     this.pp.ensure(w, h)
 
-    const styled = this.runEffect(def, s, [w, h], [0, 0], this.pp)
+    let displayTex = this.runEffect(def, s, [w, h], [0, 0], this.pp).tex
+
+    // motion trails: accumulate into a persistent feedback buffer
+    if (trails > 0.001) {
+      displayTex = this.applyTrails(displayTex, w, h, trails)
+    } else {
+      this.feedbackValid = false
+    }
 
     // composite to screen
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -116,7 +185,7 @@ export class Renderer {
     const prog = this.programs.get(compositeFrag)
     gl.useProgram(prog.prog)
     this.bindCommon(prog, s, [w, h], [0, 0], 1)
-    this.bindTexture(prog, 'uStyled', styled.tex, 1)
+    this.bindTexture(prog, 'uStyled', displayTex, 1)
     this.programs.setUniforms(prog, {
       uWipe: s.wipe,
       uLeftGrade: 0,
@@ -124,6 +193,42 @@ export class Renderer {
     this.quad.draw()
 
     this.onFrame?.(performance.now() - t0)
+
+    // keep the loop alive for animated effects (60fps)
+    this.isAnimating = animated
+    if (animated) this.requestFrame()
+  }
+
+  /** Blend the current styled frame into the persistent trails buffer. */
+  private applyTrails(curTex: WebGLTexture, w: number, h: number, trails: number): WebGLTexture {
+    const gl = this.gl
+    const resized = !this.feedback.a || this.feedback.a.w !== w || this.feedback.a.h !== h
+    this.feedback.ensure(w, h)
+    if (resized || !this.feedbackValid) {
+      // start from black so the first trailed frame has no stale content
+      for (const t of [this.feedback.read, this.feedback.write]) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, t.fb)
+        gl.viewport(0, 0, w, h)
+        gl.clearColor(0, 0, 0, 1)
+        gl.clear(gl.COLOR_BUFFER_BIT)
+      }
+      this.feedbackValid = true
+    }
+    const target = this.feedback.write
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb)
+    gl.viewport(0, 0, w, h)
+    const prog = this.programs.get(feedbackFrag)
+    gl.useProgram(prog.prog)
+    this.bindTexture(prog, 'uCur', curTex, 1)
+    this.bindTexture(prog, 'uHist', this.feedback.read.tex, 2)
+    // map trails 0..1 → decay 0.80..0.985 (longer trails near 1)
+    this.programs.setUniforms(prog, {
+      uDecay: 0.8 + trails * 0.185,
+      uMix: 1.0,
+    })
+    this.quad.draw()
+    this.feedback.swap()
+    return this.feedback.read.tex
   }
 
   /* ── effect chain (shared by screen / thumbs / export) ─────────────── */
@@ -170,6 +275,11 @@ export class Renderer {
     let prevTex: WebGLTexture | null = null
     for (let i = 0; i < def.passes.length; i++) {
       const pass = def.passes[i]
+      // evaluate uniforms/textures FIRST — these may lazily create GL
+      // textures (atlases, overlays), which must not clobber bound units
+      const uvals = pass.uniforms ? pass.uniforms(s.params, ctx) : null
+      const tmap = pass.textures ? pass.textures(s.params, ctx) : null
+
       const target = pp.write
       gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb)
       gl.viewport(0, 0, target.w, target.h)
@@ -177,14 +287,14 @@ export class Renderer {
       gl.useProgram(prog.prog)
       this.bindCommon(prog, s, outputSize, tileOrigin, bgAlpha)
       this.programs.setUniforms(prog, colorU as Record<string, UniformValue>)
-      if (pass.uniforms) this.programs.setUniforms(prog, pass.uniforms(s.params, ctx))
+      if (uvals) this.programs.setUniforms(prog, uvals)
       let unit = 1
       if (prevTex) {
         this.bindTexture(prog, 'uPrev', prevTex, unit)
         unit++
       }
-      if (pass.textures) {
-        for (const [name, tex] of Object.entries(pass.textures(s.params, ctx))) {
+      if (tmap) {
+        for (const [name, tex] of Object.entries(tmap)) {
           this.bindTexture(prog, name, tex, unit)
           unit++
         }
@@ -238,6 +348,7 @@ export class Renderer {
       uTileOrigin: tileOrigin,
       uBgAlpha: bgAlpha,
       uSeed: s.imageId % 997,
+      uTime: this.timeOverride ?? this.timeSeconds,
     })
   }
 
@@ -310,14 +421,25 @@ export class Renderer {
     const pp = new PingPong(gl)
     pp.ensure(w, h)
     const def = getEffect(s.effectId)
-    // thumbnails never wait for the CPU path — GPU approximation only
+    // thumbnails are a fixed, representative animation frame
+    this.timeOverride = 1.4
     const styled = this.runEffect(def, s, [w, h], [0, 0], pp, 1, null)
+    this.timeOverride = null
     gl.bindFramebuffer(gl.FRAMEBUFFER, styled.fb)
     const px = new Uint8Array(w * h * 4)
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     pp.dispose()
     return px
+  }
+
+  /** Freeze the animation clock at the current frame (for tiled export). */
+  freezeTime(): number {
+    this.timeOverride = this.timeSeconds
+    return this.timeSeconds
+  }
+  unfreezeTime() {
+    this.timeOverride = null
   }
 
   get sourceSize(): [number, number] {
@@ -332,12 +454,21 @@ export class Renderer {
 
   dispose() {
     if (this.rafId) cancelAnimationFrame(this.rafId)
+    this.canvas.removeEventListener('webglcontextlost', this.onGlLost)
+    this.canvas.removeEventListener('webglcontextrestored', this.onGlRestored)
     this.cpu.dispose()
     this.clearOverlays()
     this.pp.dispose()
+    this.feedback.dispose()
     this.atlases.dispose()
     this.programs.dispose()
     this.quad.dispose()
+    if (this.srcTex) this.gl.deleteTexture(this.srcTex)
+    this.srcTex = null
+  }
+
+  get isLost(): boolean {
+    return this.lost
   }
 }
 

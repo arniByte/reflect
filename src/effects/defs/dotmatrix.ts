@@ -1,5 +1,5 @@
 import type { EffectDef } from '../types'
-import { hexToRgb } from '../types'
+import { hexToRgb, groundControl, groundUniforms } from '../types'
 import frag from '../../shaders/effects/dotmatrix.frag?raw'
 
 export const dotmatrixDef: EffectDef = {
@@ -15,8 +15,10 @@ export const dotmatrixDef: EffectDef = {
         uGamma: p.gamma as number,
         uGlow: p.glow as number,
         uColorMode: p.colorMode === 'source' ? 1 : 0,
+        uWave: p.wave as number,
         uMonoColor: hexToRgb(p.monoColor as string),
         uBg: hexToRgb(p.bg as string),
+        ...groundUniforms(p, { dark: 0.4, desat: 0.7 }),
       }),
     },
   ],
@@ -36,15 +38,22 @@ export const dotmatrixDef: EffectDef = {
     },
     { kind: 'color', key: 'monoColor', label: 'COLOR' },
     { kind: 'color', key: 'bg', label: 'BG' },
+    groundControl,
+    { kind: 'slider', key: 'wave', label: 'WAVE', min: 0, max: 1, step: 0.01, unit: 'pct' },
+    { kind: 'slider', key: 'trails', label: 'TRAILS', min: 0, max: 1, step: 0.01, unit: 'pct' },
   ],
   defaults: {
-    cells: 96,
-    dotMin: 0.22,
-    dotMax: 1.05,
-    gamma: 1.1,
-    glow: 0.55,
-    colorMode: 'mono',
+    cells: 104,
+    dotMin: 0.28,
+    dotMax: 1.15,
+    gamma: 0.95,
+    glow: 0.5,
+    colorMode: 'source',
     monoColor: '#fff2d9',
     bg: '#000000',
+    ground: 0.28,
+    wave: 0,
+    trails: 0,
   },
+  animated: (p) => (p.wave as number) > 0 || (p.trails as number) > 0,
 }

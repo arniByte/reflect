@@ -14,13 +14,14 @@ export function TopBar({ onOpen, onExport }: Props) {
       <div className="topbar__brand">
         <span className="topbar__tag">[WEBGL2]</span>
         <span className="topbar__name">REFLECT</span>
+        <span className="topbar__by">BY ARNI</span>
       </div>
-      <span className="topbar__stat">IMAGE FX CONSOLE · ALL LOCAL · NO UPLOAD</span>
+      <span className="topbar__stat">IMAGE FX CONSOLE · RUNS 100% IN YOUR BROWSER</span>
       <div className="topbar__spacer" />
       <button className="textbtn" onClick={onOpen}>
         OPEN
       </button>
-      <button className="textbtn" onClick={resetAll} disabled={!hasImage}>
+      <button className="textbtn topbar__reset" onClick={resetAll} disabled={!hasImage}>
         RESET
       </button>
       <button className="textbtn textbtn--fill" onClick={onExport} disabled={!hasImage}>

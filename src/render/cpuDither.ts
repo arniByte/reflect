@@ -27,6 +27,13 @@ export class CpuDitherEngine {
       this.worker = new Worker(new URL('../workers/dither.worker.ts', import.meta.url), {
         type: 'module',
       })
+      // a crashed worker must not strand pendingKey forever — reset so the
+      // next render re-tries with a fresh worker
+      this.worker.addEventListener('error', () => {
+        this.pendingKey = ''
+        this.worker?.terminate()
+        this.worker = null
+      })
     }
     return this.worker
   }
@@ -67,22 +74,33 @@ export class CpuDitherEngine {
     return null
   }
 
-  /** Run a one-shot full-size job (export path). */
+  /** Run a one-shot full-size job (export path). Rejects if the worker dies. */
   runOnce(
     px: Uint8Array,
     w: number,
     h: number,
     req: Record<string, unknown>,
   ): Promise<Uint8Array> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const id = ++this.jobId
       const worker = this.ensureWorker()
+      const cleanup = () => {
+        worker.removeEventListener('message', onMsg)
+        worker.removeEventListener('error', onErr)
+      }
       const onMsg = (e: MessageEvent<DitherResult>) => {
         if (e.data.id !== id) return
-        worker.removeEventListener('message', onMsg)
+        cleanup()
         resolve(new Uint8Array(e.data.data))
       }
+      const onErr = (e: ErrorEvent) => {
+        cleanup()
+        this.worker?.terminate()
+        this.worker = null
+        reject(new Error('DITHER WORKER FAILED: ' + e.message))
+      }
       worker.addEventListener('message', onMsg)
+      worker.addEventListener('error', onErr)
       worker.postMessage({ id, w, h, data: px.buffer, ...req }, [px.buffer])
     })
   }

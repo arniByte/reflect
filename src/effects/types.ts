@@ -13,6 +13,10 @@ export type EffectId =
   | 'glitch'
   | 'laser'
   | 'blueprint'
+  | 'gradientmap'
+  | 'crystal'
+  | 'flow'
+  | 'ripple'
 
 export type ParamValue = number | string | boolean
 export type Params = Record<string, ParamValue>
@@ -100,9 +104,18 @@ export interface EffectDef {
   passes: PassSpec[]
   controls: ControlDef[]
   defaults: Params
-  /** px of neighborhood a pass reads beyond its own pixel (tiled export apron) */
-  apron?: (params: Params) => number
+  /** px of neighborhood a pass reads beyond its own pixel at the given
+   *  output size (tiled export apron) */
+  apron?: (params: Params, outputSize: [number, number]) => number
   cpu?: CpuSpec
+  /** true for full-frame effects that always emit opaque pixels (they don't
+   *  call withBg) — the TRANSPARENT export toggle is meaningless for these */
+  opaque?: boolean
+  /** true (or a predicate on params) if the effect uses uTime — the renderer
+   *  keeps a 60fps loop running and, if params include `trails` > 0,
+   *  accumulates motion trails. A predicate lets an effect stay static (no
+   *  loop) until its motion/trails params are turned up. */
+  animated?: boolean | ((params: Params) => boolean)
 }
 
 /* ── shared helpers for defs ─────────────────────────────────────────── */
@@ -123,4 +136,27 @@ export function paletteToV3v(hexes: string[]): { v3v: Float32Array } {
     arr[i * 3 + 2] = b
   })
   return { v3v: arr }
+}
+
+/** GROUND control — reusable across mark effects (image shows behind marks). */
+export const groundControl: ControlDef = {
+  kind: 'slider',
+  key: 'ground',
+  label: 'GROUND',
+  min: 0,
+  max: 1,
+  step: 0.01,
+  unit: 'pct',
+}
+
+/** Uniforms for the shared image-ground helper in common.glsl. */
+export function groundUniforms(
+  p: Params,
+  opts: { dark?: number; desat?: number } = {},
+): Record<string, number> {
+  return {
+    uGround: (p.ground as number) ?? 0,
+    uGroundDark: opts.dark ?? 0.5,
+    uGroundDesat: opts.desat ?? 0.6,
+  }
 }

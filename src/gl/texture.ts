@@ -1,11 +1,19 @@
+/** Texture creation happens on a scratch unit so it never disturbs units 0..14
+ *  that may hold live sampler bindings mid-pass. */
+const SCRATCH_UNIT = 15
+
 /** Upload an ImageBitmap/canvas as a mipmapped RGBA8 texture (the source image). */
 export function createSourceTexture(
   gl: WebGL2RenderingContext,
   image: TexImageSource & { width: number; height: number },
 ): WebGLTexture {
+  // NOTE: no UNPACK_FLIP_Y here — browsers ignore it for ImageBitmap
+  // sources, so it cannot be relied on. Row 0 = image TOP at v=0; the
+  // shaders flip v at sample time (srcUV in common.glsl).
   const tex = gl.createTexture()!
+  gl.activeTexture(gl.TEXTURE0 + SCRATCH_UNIT)
   gl.bindTexture(gl.TEXTURE_2D, tex)
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
   const levels = Math.floor(Math.log2(Math.max(image.width, image.height))) + 1
   gl.texStorage2D(gl.TEXTURE_2D, levels, gl.RGBA8, image.width, image.height)
   gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image)
@@ -26,6 +34,7 @@ export function createCanvasTexture(
   opts: { flipY?: boolean; nearest?: boolean } = {},
 ): WebGLTexture {
   const tex = gl.createTexture()!
+  gl.activeTexture(gl.TEXTURE0 + SCRATCH_UNIT)
   gl.bindTexture(gl.TEXTURE_2D, tex)
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, opts.flipY ?? true)
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas)
@@ -47,6 +56,7 @@ export function createDataTexture(
   h: number,
 ): WebGLTexture {
   const tex = gl.createTexture()!
+  gl.activeTexture(gl.TEXTURE0 + SCRATCH_UNIT)
   gl.bindTexture(gl.TEXTURE_2D, tex)
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)

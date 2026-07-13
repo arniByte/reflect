@@ -48,9 +48,11 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 
 .app {
   height: 100%;
+  max-width: 100vw;
+  overflow: hidden;
   display: grid;
-  grid-template-rows: var(--h-topbar) 1fr var(--h-dock);
-  grid-template-columns: var(--w-panel) 1fr var(--w-panel);
+  grid-template-rows: var(--h-topbar) minmax(0, 1fr) var(--h-dock);
+  grid-template-columns: var(--w-panel) minmax(0, 1fr) var(--w-panel);
   grid-template-areas:
     'top top top'
     'left stage right'
@@ -83,6 +85,14 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
   font-size: var(--fs-title);
   letter-spacing: var(--track-wide);
   font-weight: 500;
+}
+.topbar__by {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--fg-faint);
+  border: 1px solid var(--hair);
+  padding: 2px 6px;
+  align-self: center;
 }
 .topbar__spacer { flex: 1; }
 .topbar__stat {
@@ -517,17 +527,90 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.7); }
 
 /* ── mobile ──────────────────────────────────────────────────────────── */
 
+/* ── tablet: slimmer panels ──────────────────────────────────────────── */
+@media (max-width: 1024px) and (min-width: 761px) {
+  .app { --w-panel: 188px; }
+}
+
+/* ── phone: stacked, horizontal effect rail, bottom-sheet panels ─────── */
 @media (max-width: 760px) {
+  /* the whole page scrolls on phones — a fixed 100dvh shell would clip the
+     stacked panels + dock below the fold (base .app has overflow:hidden) */
   .app {
-    grid-template-rows: var(--h-topbar) 1fr auto auto var(--h-dock);
-    grid-template-columns: 1fr;
+    grid-template-rows: auto 56vh auto auto auto;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'top' 'stage' 'left' 'right' 'dock';
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
   }
+  .panel--left, .panel--right { min-width: 0; }
+  /* keep the toolbar reachable while the body scrolls */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding-top: env(safe-area-inset-top);
+    height: auto;
+    min-height: var(--h-topbar);
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .topbar__stat { display: none; }
+  .topbar__reset { display: none; }
+
   .panel--left, .panel--right {
     border: none;
     border-top: 1px solid var(--hair);
-    max-height: 30vh;
+    max-height: none;
+    overflow: visible;
   }
+  .panel__head { position: static; }
+
+  /* effect list becomes a horizontal, snap-scrolling rail */
+  .panel--left .fxlist {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 0 12px 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .fxlist__item {
+    flex: 0 0 auto;
+    border: 1px solid var(--hair);
+    padding: 8px 12px;
+    scroll-snap-align: start;
+  }
+  .fxlist__item--on { border-color: var(--fg); }
+
+  /* controls: two-up grid so panels don't run tall */
+  .panel--left .ctl,
+  .panel--right .ctl {
+    display: inline-block;
+    width: 50%;
+    vertical-align: top;
+  }
+  .panel__rule { margin: 8px 12px; }
+
   .app { --h-dock: 96px; }
-  .pthumb__img { width: 64px; height: 48px; }
+  .dock {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .dock__quality { display: none; }
+  .pthumb__img { width: 72px; height: 54px; }
+  .hud--tr, .hud--br { display: none; }
+  .hud { font-size: 8px; }
+
+  /* bigger touch targets */
+  .slider { height: 22px; }
+  .textbtn { padding: 8px 14px; }
+  dialog.sheet { min-width: min(92vw, 340px); }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .app { grid-template-rows: auto 1fr auto auto auto; }
 }
